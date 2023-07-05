@@ -74,8 +74,8 @@ function Action(action, args = [], client) {
     });
 }
 
-function Client() {
-    const self = new ClientClass();
+function Client(options = {}) {
+    const self = new ClientClass(options);
     return new Proxy(self, {
         get(target, prop) {
             if (prop in target) {
