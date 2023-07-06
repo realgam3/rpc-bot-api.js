@@ -1,8 +1,11 @@
 const amqplib = require("amqplib");
+const {v4: uuid4} = require("uuid");
+
 const {getEnv, getKey} = require("./utils");
 
 class ClientClass {
     constructor(options = {}) {
+        this.timeout = getKey(options, "timeout", 0);
         this.webhook = getKey(options, "webhook");
         this.actions = getKey(options, "actions", []);
         this.queue = {
@@ -19,7 +22,20 @@ class ClientClass {
         this.actions.push(action);
     }
 
-    async send() {
+    async send(webhook = this.webhook) {
+        return await this.call(webhook, false);
+    }
+
+    async call(webhook = this.webhook, respond = true) {
+        // Create the message
+        const message = {
+            "webhook": this.webhook,
+            "actions": this.actions.map((action) => action.toJSON()),
+        };
+
+        // Clean up
+        this.actions = [];
+
         const connection = await amqplib.connect({
             protocol: "amqp",
             ...this.queue,
@@ -30,13 +46,53 @@ class ClientClass {
             durable: false
         });
 
-        channel.sendToQueue(this.queue.name, Buffer.from(JSON.stringify({
-            "webhook": this.webhook,
-            "actions": this.actions.map((action) => action.toJSON()),
-        })));
-        await channel.close();
-        await connection.close();
-        this.actions = [];
+        if (!respond) {
+            return await channel.sendToQueue(this.queue.name, Buffer.from(JSON.stringify(message)));
+        }
+
+        return await new Promise(async (resolve, reject) => {
+            let timeout = null;
+            // Generate a unique correlation ID for this request
+            const correlationId = uuid4();
+
+            // Create a unique queue for replies
+            const replyTo = await channel.assertQueue('', {exclusive: true});
+
+            // This is the callback that will handle replies from the server
+            await channel.consume(replyTo.queue, (msg) => {
+                // Ignore messages that don't have the right correlation ID
+                if (msg.properties.correlationId !== correlationId) {
+                    return;
+                }
+
+                // Cancel the timeout
+                if (timeout) {
+                    clearTimeout(timeout);
+                }
+
+                // Close the channel and connection when done
+                channel.close();
+                connection.close();
+
+                // Resolve the promise with the parsed response
+                resolve(JSON.parse(msg.content.toString()));
+            });
+
+            // Send the request
+            await channel.sendToQueue(this.queue.name, Buffer.from(JSON.stringify(message)), {
+                "correlationId": correlationId,
+                "replyTo": replyTo.queue,
+            });
+
+            // Set timeout for response
+            if (this.timeout > 0) {
+                timeout = setTimeout(() => {
+                    channel.close();
+                    connection.close();
+                    reject(new Error("Timeout"));
+                }, this.timeout);
+            }
+        });
     }
 }
 
