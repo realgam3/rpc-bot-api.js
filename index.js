@@ -1,19 +1,18 @@
 const amqplib = require("amqplib");
 const {v4: uuid4} = require("uuid");
 
-const {getEnv, getKey} = require("./utils");
+const {getEnv, getKey, sleep} = require("./utils");
 
 class ClientClass {
     constructor(options = {}) {
         this.timeout = getKey(options, "timeout", 0);
-        this.webhook = getKey(options, "webhook");
+        this.webhook = getKey(options, "webhook", null);
         this.actions = getKey(options, "actions", []);
+        this.tries = parseInt(getKey(options, "tries", 15));
+        this.delay = parseInt(getKey(options, "delay", 2000));
         this.queue = {
-            "port": parseInt(getEnv("RABBITMQ_PORT", 5672)),
-            "host": getEnv("RABBITMQ_HOST", "queue"),
+            "url": getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672"),
             "name": getEnv("QUEUE_NAME", "queue"),
-            "username": getEnv("RABBITMQ_USERNAME", "guest"),
-            "password": getEnv("RABBITMQ_PASSWORD", "guest"),
             ...getKey(options, "queue", {}),
         };
     }
@@ -36,10 +35,19 @@ class ClientClass {
         // Clean up
         this.actions = [];
 
-        const connection = await amqplib.connect({
-            protocol: "amqp",
-            ...this.queue,
-        });
+        let connection = null;
+        for (let i = 0; i < this.tries; i++) {
+            try {
+                connection = await amqplib.connect(this.queue.url);
+                break;
+            } catch (error) {
+                await sleep(this.delay);
+            }
+        }
+
+        if (!connection) {
+            throw new Error(`Failed to connect to queue after ${this.tries} tries`);
+        }
 
         const channel = await connection.createChannel();
         await channel.assertQueue(this.queue.name, {

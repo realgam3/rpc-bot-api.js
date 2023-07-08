@@ -1,11 +1,11 @@
 const {Client} = require('../../');
 
 (async () => {
-    const context = Client();
-
+    let context = Client();
     context.extend.example();
     await context.send();
 
+    context = Client();
     context.page.goto("https://www.google.com");
     context.page.waitForTimeout(3000);
     context.extend.closePages();
@@ -15,5 +15,4 @@ const {Client} = require('../../');
     context.page.waitForTimeout(3000);
     let result = await context.call();
     console.log(result);
-
 })();
