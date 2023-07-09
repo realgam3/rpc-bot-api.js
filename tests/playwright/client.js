@@ -15,4 +15,5 @@ const {Client} = require('../../');
     context.page.waitForTimeout(3000);
     let result = await context.call();
     console.log(result);
+    process.exit(0);
 })();
