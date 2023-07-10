@@ -6,7 +6,6 @@ const {getEnv, getKey, sleep} = require("./utils");
 class ClientClass {
     constructor(options = {}) {
         this.timeout = getKey(options, "timeout", 0);
-        this.webhook = getKey(options, "webhook", null);
         this.actions = getKey(options, "actions", []);
         this.tries = parseInt(getKey(options, "tries", 15));
         this.delay = parseInt(getKey(options, "delay", 2000));
@@ -21,14 +20,19 @@ class ClientClass {
         this.actions.push(action);
     }
 
-    async send(webhook = this.webhook) {
-        return await this.call(webhook, false);
+    async send(options = {}) {
+        return await this.call({...options, respond: false});
     }
 
-    async call(webhook = this.webhook, respond = true) {
+    async call(options = {}) {
+        const respond = getKey(options, "respond", true);
+        const webhook = getKey(options, "webhook", undefined);
+        const timeout = getKey(options, "timeout", undefined);
+
         // Create the message
         const message = {
-            "webhook": this.webhook,
+            "timeout": timeout,
+            "webhook": webhook,
             "actions": this.actions.map((action) => action.toJSON()),
         };
 

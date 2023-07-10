@@ -30,7 +30,7 @@ machines, please refer to the RPC Bot Client repository.
 ## Usage:
 
 ```JavaScript
-const {Client} = require('rpc-bot-client');
+const {Client} = require("rpc-bot-client");
 
 (async () => {
     // Don't wait for result
