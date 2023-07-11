@@ -1,5 +1,5 @@
 {
-  "name": "ctf-bot-client",
+  "name": "rpc-bot-api",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

@@ -1,4 +1,4 @@
-# RPC Bot Client
+# RPC Bot API (Client)
 
 ____________________
 
