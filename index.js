@@ -28,6 +28,7 @@ class ClientClass {
         const respond = getKey(options, "respond", true);
         const webhook = getKey(options, "webhook", undefined);
         const timeout = getKey(options, "timeout", undefined);
+        const raiseException = getKey(options, "raiseException", false);
 
         // Create the message
         const message = {
@@ -62,7 +63,7 @@ class ClientClass {
             return await channel.sendToQueue(this.queue.name, Buffer.from(JSON.stringify(message)));
         }
 
-        return await new Promise(async (resolve, reject) => {
+        const res = await new Promise(async (resolve, reject) => {
             let timeout = null;
             // Generate a unique correlation ID for this request
             const correlationId = uuid4();
@@ -105,6 +106,20 @@ class ClientClass {
                 }, this.timeout);
             }
         });
+
+        if (res.error && raiseException) {
+            let error = new Error(res.error.message);
+            error.name = res.error.name;
+            if (res.result) {
+                error.result = res.result;
+            }
+            throw error;
+        }
+        return res;
+    }
+
+    async callEx(options = {}) {
+        return await this.call({...options, raiseException: true});
     }
 }
 

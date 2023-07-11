@@ -13,7 +13,7 @@ const {Client} = require('../../');
     context.page.waitForTimeout(3000);
     context.page.goto("https://www.google.com");
     context.page.waitForTimeout(3000);
-    let result = await context.call();
+    let result = await context.callEx();
     console.log(result);
     process.exit(0);
 })();
