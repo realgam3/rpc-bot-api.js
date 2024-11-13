@@ -27,10 +27,16 @@ across your networked environment.
 This project is a vital component of the RPC Bot system. For the client-side component that resides on the remote
 machines, please refer to the RPC Bot Client repository.
 
+# Installation:
+
+```bash
+npm install @rpc-bot/api
+```
+
 ## Usage:
 
 ```JavaScript
-const {Client} = require("rpc-bot-client");
+const {Client} = require("@rpc-bot/api");
 
 (async () => {
     // Don't wait for result
